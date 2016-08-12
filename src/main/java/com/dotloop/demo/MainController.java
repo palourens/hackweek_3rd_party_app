@@ -1,0 +1,194 @@
+package com.dotloop.demo;
+
+import com.dotloop.demo.dao.UserRepository;
+import com.dotloop.demo.domain.User;
+
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+//import org.springframework.security.authentication.AuthenticationManager;
+//import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+//import org.springframework.security.core.Authentication;
+//import org.springframework.security.core.context.SecurityContext;
+//import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.*;
+//import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+@Controller
+@EnableAutoConfiguration
+public class MainController {
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
+    @Value("${dotloop_url}")
+    private String REMOTE_URL;
+
+    @Value("${client_id}")
+    private String clientId;
+
+    @Value("${client_secret}")
+    private String clientSecret;
+
+    @Value("${redirect_url}")
+    private String redirectUrl;
+
+    @Value("${url_token")
+    private String urlToken;
+
+    @Value("${url_create_loop}")
+    private String urlCreateLoop;
+
+
+//    @Autowired
+//    AuthenticationManager authenticationManager;
+//
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    RestClient restClient;
+
+    @RequestMapping("/")
+    String home(HttpServletRequest request) {
+        HttpSession session = request.getSession();
+        log.info("redirectUrl: " + redirectUrl);
+        log.info("clientId:" + clientId);
+        session.setAttribute("redirectUrl", redirectUrl);
+        session.setAttribute("clientId", clientId);
+        return "home";
+    }
+
+    @RequestMapping(value = "/register")
+    String register() {
+        return "register";
+    }
+
+    @RequestMapping(value = "/register", method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    String registered(@RequestBody User user) {
+        //log.debug(user);
+        return "redirect:/";
+    }
+
+    @RequestMapping(value = "/signin", method = RequestMethod.GET)
+    String signinRedirect() {
+        return "home";
+    }
+    @RequestMapping(value = "/signin", method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    String signin(HttpServletRequest request, @RequestParam String email, @RequestParam String password) {
+//        UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(email, password);
+//
+//        // Authenticate the user
+//        Authentication authentication = authenticationManager.authenticate(authRequest);
+//        SecurityContext securityContext = SecurityContextHolder.getContext();
+//        securityContext.setAuthentication(authentication);
+//
+//        // Create a new session and add the security context.
+//        HttpSession session = request.getSession(true);
+//        session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
+
+        log.info("email=" + email);
+        log.info("password=" + password);
+        HttpSession session = request.getSession(true);
+        session.setAttribute("redirectUrl", redirectUrl);
+        session.setAttribute("clientId", clientId);
+        session.setAttribute("user", userRepository.findByUsername("pierrel@dotloop.com").get(0));
+        return "home";
+    }
+
+    @RequestMapping("/signout")
+    String signout(HttpServletRequest request) {
+        HttpSession session = request.getSession();
+        session.invalidate();
+        return "home";
+    }
+
+    @RequestMapping("/loopit")
+    String loopit(@CookieValue("JSESSIONID") String cookie, HttpServletRequest request) {
+        log.info("Called loopit");
+        User user = (User)request.getSession().getAttribute("user");
+        log.info("TOKEN=" + user.getToken());
+        if(user.getToken() == null || user.getToken().length() == 0) {
+//            Map<String, String> params = new HashMap<>();
+//            params.put("email", user.getUsername());
+//            params.put("CLIENT_ID", clientId);
+//            HttpHeaders requestHeaders = new HttpHeaders();
+//            requestHeaders.add("Cookie", "JSESSIONID=" + cookie);
+//            String result = restClient.get(REMOTE_URL + "/oauth2/authorize?response_type=code&client_id=${CLIENT_ID}&scopes=loops:*,profiles:*&redirect_uri=http://mandp:9999/authorize?code=__CODE__", params, requestHeaders);
+        } else {
+            createLoop(user.getToken());
+        }
+        return "home";
+    }
+
+    @RequestMapping("/authorize")
+    String authorize(HttpServletRequest request, @RequestParam String code) { //throws Exception {
+        User user = (User)request.getSession().getAttribute("user");
+        user.setCode(code);
+        userRepository.save(user);
+        // make http call to dotloop
+        Map<String, String> map = new HashMap<>();
+        List<String> codes = new ArrayList<>();
+        codes.add(code);
+        map.put("code", code);
+        List<String> types = new ArrayList<>();
+        types.add("authorization_code");
+        map.put("grant_type",  "authorization_code");
+        List<String> redirects = new ArrayList<>();
+        redirects.add(redirectUrl);
+        map.put("redirect_uri", redirectUrl);
+        List<String> clients = new ArrayList<>();
+        clients.add(clientId);
+        map.put("client_id", clientId);
+        List<String> secrets = new ArrayList<>();
+        secrets.add(clientSecret);
+        map.put("client_secret", clientSecret);
+        String result = restClient.post(REMOTE_URL + "/oauth2/token", map, new HashMap<String, String>());
+        JSONObject obj = new JSONObject(result);
+        String token = obj.getString("access_token");
+        log.info("##### TOKEN=" + token);
+        user.setToken(token);
+        userRepository.save(user);
+        //Thread.sleep(2000);
+        String name = createLoop(token);
+        //request.setAttribute("loop", name);
+        return "loop";
+    }
+
+    private String createLoop(String token) {
+        String loopName = "Loop name";
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        Map<String, String> map = new HashMap<>();
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", "Bearer " + token);
+        headers.put("Accept", "*/*");
+        log.info("Create a loop using token: " + token);
+        String loop = restClient.post(urlCreateLoop, map, headers);
+        log.info("Result from DotLoop: " + loop);
+        return "loop";
+    }
+
+    @RequestMapping("/revoke")
+    String revoke(HttpServletRequest request) {
+        User user = (User)request.getSession().getAttribute("user");
+        user.setToken(null);
+        userRepository.save(user);
+        log.info("Token deleted");
+        return "home";
+    }
+}
