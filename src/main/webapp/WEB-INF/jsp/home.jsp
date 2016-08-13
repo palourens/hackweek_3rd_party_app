@@ -39,7 +39,7 @@
         <div class="row">
             <div class="col-md-12 col-sm-6 col-xs-12">
                 <div class="panel-body">
-                    <div style="float:right;"><a href="" onclick="openPopup()" class="btn btn-lg btn-primary" style="width:150px; margin: 20px;">Loop It!</a><c:if test="${sessionScope.user != null && sessionScope.user.token != null}"><a href="/revoke"><button class="btn btn-warning" style="width: 150px; margin: 20px;">Delete Token</button></a></c:if></div>
+                    <div style="float:right;"><img src="/loopit-button.png" onclick="openPopup()" style="cursor: pointer;margin: 20px;border: 3px solid #61B6FF;border-radius: 15px;"><c:if test="${sessionScope.user != null && sessionScope.user.token != null}"><a href="/revoke"><button class="btn btn-warning" style="width: 150px; margin: 20px;">Delete Token</button></a></c:if></div>
 
 
                     <div>
