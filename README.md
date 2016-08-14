@@ -1,4 +1,4 @@
-HACKWEEK 3rd party example
+Sample Spring Boot Web Application with JSP
 ====
 
 Building and running

@@ -6,13 +6,14 @@
 <body>
     <div class="container">
 
- <h1>LOOP CREATED</h1>
+ <h1>App Authorized</h1>
     </div> <!-- /container -->
 
 <script>
   window.onload = function() {
-    window.opener.location.reload(true);
-    window.close();
+      //window.opener.location.href = "http://mandp.com:9999";
+      //window.opener.location.reload(true);
+      window.close();
   };
 </script>
 </body>
