@@ -56,7 +56,7 @@
             <c:otherwise>
         <div class="row">
             <div class="col-md-12">
-                <div style="float:right;"><img id="loopit" src="/loopit-button.png" style="cursor: pointer;margin: 20px;border: 3px solid #61B6FF;border-radius: 15px; display:block;"><a href="/revoke"><button id="deletetoken" class="btn btn-warning hidden" style="width: 150px; margin: 20px;">Delete Token</button></a></div>
+                <div style="float:right;"><img id="loopit" src="/loopit-button.png" style="cursor: pointer;margin: 20px;border: 3px solid #61B6FF;border-radius: 15px; display:block;"><button id="deletetoken" style="border-radius: 15px; width: 170px;" class="btn btn-warning hidden">Delete Token</button></div>
 
                 <div>
                 <div class="panel-body" style="display:flex;">
@@ -130,6 +130,7 @@
 
         $(document).ready(function() {
             $('#loopit').click(openPopup);
+            $('#deletetoken').click(revokeToken);
             if(token) {
                 setupButtons();
             }

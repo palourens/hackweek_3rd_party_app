@@ -2,7 +2,7 @@ var stillOpen = false;
 var popup = null;
 
 function openPopup() {
-    $('#loopit').off('click')
+    $('#loopit').off()
         .attr("src", "/loopit-button-disabled.png");
 
     popup = window.open("http://localhost:8080/oauth2/authorize?response_type=code&scopes=loops:*,profiles:*&client_id=" + clientId + "&redirect_uri=" + redirectUrl);
@@ -11,11 +11,16 @@ function openPopup() {
 }
 
 function loopIt() {
-    $('#loopit').off('click')
+    $('#loopit').off()
                 .attr("src", "/loopit-button-disabled.png");
     $.post("/loopit", { "loopName": $('#addressName').val() })
         .done(function(data) {
             showAlert(JSON.parse(data));
+            $('#addresses').val('')
+            $('#addressName').val('');
+        })
+        .fail(function() {
+            showAlert({ "error": true });
         })
         .always(function() {
             $('#loopit').attr("src", "/loopit-button.png")
@@ -24,10 +29,22 @@ function loopIt() {
 }
 
 function showAlert(data) {
-    if(data.token) {
+    if(data.error) {
+        $("#alertText").html("<strong>ERROR!</strong>&nbsp;Action failed.");
+        $("#alert").removeClass("hidden").removeClass("alert-success").addClass("alert-danger").addClass("show");
+        setTimeout(function () {
+            $("#alert").removeClass("show").addClass("hidden");
+        }, 5000);
+    } else if(data.token) {
         token = data.token;
         $("#alertText").html("<strong>Looped!</strong>&nbsp;A loop named " + data.name + " was created.");
-        $("#alert").removeClass("hidden").addClass("show");
+        $("#alert").removeClass("hidden").removeClass("alert-danger").addClass("alert-success").addClass("show");
+        setTimeout(function () {
+            $("#alert").removeClass("show").addClass("hidden");
+        }, 5000);
+    } else if(data.revoke) {
+        $("#alertText").html("<strong>Revoked!</strong>&nbsp;The token was revoked.");
+        $("#alert").removeClass("hidden").removeClass("alert-danger").addClass("alert-success").addClass("show");
         setTimeout(function () {
             $("#alert").removeClass("show").addClass("hidden");
         }, 5000);
@@ -47,17 +64,32 @@ function monitorAuthWindow(popWindow){
             $.post("/loopit", { "loopName": $('#addressName').val() })
                 .done(function(data) {
                     showAlert(JSON.parse(data));
-                    setupButtons();
+                    $('#addresses').val('')
+                    $('#addressName').val('');
+                })
+                .fail(function() {
+                    console.log("FAIL");
+                    showAlert({ "error": true });
                 })
                 .always(function() {
-                    $('#loopit').attr("src", "/loopit-button.png")
-                                .click(loopIt);
+                    setupButtons();
+                    $('#loopit').attr("src", "/loopit-button.png");
                 });
         } else {
             setTimeout(function() { monitorAuthWindow(popWindow); }, 1000);
         }
     }
 }
+
+function revokeToken() {
+    $.get("/revoke")
+        .done(showAlert({ revoke: true}))
+        .always(function() {
+            $('#loopit').off();
+            $('#loopit').click(openPopup);
+            $('#deletetoken').addClass("hidden");
+        });
+    }
 
 var listings = {
     "631 O'farrell St Apt 1107": "631_ofarrell.png",

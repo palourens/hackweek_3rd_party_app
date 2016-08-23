@@ -121,6 +121,8 @@ public class MainController {
         log.info("Called loopit with name: " + loop.get("loopName").get(0));
         User user = (User)request.getSession().getAttribute("user");
         log.info("TOKEN=" + user.getToken());
+        if(user.getToken() == null)
+            return "{ \"token\": false }";
         String name = "NOT CREATED";
         if(user.getToken() == null || user.getToken().length() == 0) {
 //            Map<String, String> params = new HashMap<>();
@@ -165,6 +167,7 @@ public class MainController {
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", "Bearer " + token);
         headers.put("Accept", "*/*");
+        //headers.put("Content-Type", "application/json");
         log.info("Create a loop using token: " + token);
         String result = restClient.post(urlCreateLoop, data, headers);
         JSONObject obj = new JSONObject(result);
